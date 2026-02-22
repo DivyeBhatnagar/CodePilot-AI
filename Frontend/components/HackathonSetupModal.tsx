@@ -42,6 +42,10 @@ export default function HackathonSetupModal({
   ];
 
   const handleNext = () => {
+    // Ensure team members are initialized before moving to step 2
+    if (step === 1 && formData.team_members.length !== formData.team_size) {
+      initializeTeamMembers(formData.team_size);
+    }
     if (step < 3) setStep(step + 1);
   };
 
@@ -181,7 +185,10 @@ export default function HackathonSetupModal({
                           <input
                             type="number"
                             value={formData.team_size}
-                            onChange={(e) => initializeTeamMembers(parseInt(e.target.value))}
+                            onChange={(e) => {
+                              const size = parseInt(e.target.value) || 1;
+                              initializeTeamMembers(size);
+                            }}
                             min="1"
                             max="10"
                             className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"

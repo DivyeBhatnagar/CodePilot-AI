@@ -1,27 +1,29 @@
 'use client';
 
 import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { Code, Copy, Download, Sparkles, Loader2, Check } from 'lucide-react';
-import { generateCode, CodeGenerateRequest } from '@/lib/api';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Code, Sparkles, Loader2 } from 'lucide-react';
+import { buildProject, downloadProjectZip, ProjectBuildRequest, ProjectResponse } from '@/lib/api';
+import CodeEditorLayout from './ProjectBuilder/CodeEditorLayout';
+import LoadingOverlay from './ProjectBuilder/LoadingOverlay';
 
 export default function CodeGenerator() {
   const [prompt, setPrompt] = useState('');
   const [language, setLanguage] = useState('');
   const [projectType, setProjectType] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [result, setResult] = useState('');
+  const [projectData, setProjectData] = useState<ProjectResponse | null>(null);
   const [error, setError] = useState('');
-  const [copied, setCopied] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
 
   const languages = [
-    'Python', 'JavaScript', 'TypeScript', 'React', 'Next.js', 
-    'FastAPI', 'Node.js', 'Vue.js', 'Django', 'Flask'
+    'python', 'javascript', 'typescript', 'react', 'nextjs', 
+    'fastapi', 'nodejs', 'vue', 'django', 'flask', 'go', 'rust'
   ];
 
   const projectTypes = [
-    'Web App', 'API', 'Mobile App', 'CLI Tool', 
-    'Microservice', 'Full Stack', 'Frontend', 'Backend'
+    'backend', 'frontend', 'fullstack', 'api', 
+    'microservice', 'cli', 'mobile', 'desktop'
   ];
 
   const handleGenerate = async () => {
@@ -32,64 +34,94 @@ export default function CodeGenerator() {
 
     setGenerating(true);
     setError('');
-    setResult('');
+    setProjectData(null);
+    setShowEditor(false);
 
     try {
-      const request: CodeGenerateRequest = {
+      const request: ProjectBuildRequest = {
         prompt: prompt.trim(),
-        language,
-        project_type: projectType
+        language: language.toLowerCase(),
+        project_type: projectType.toLowerCase()
       };
 
-      const response = await generateCode(request);
-      setResult(response.code_output);
+      const response = await buildProject(request);
+      setProjectData(response);
+      setShowEditor(true);
     } catch (err: any) {
-      console.error('Code generation error:', err);
-      setError(err.message || 'Failed to generate code');
+      console.error('Project build error:', err);
+      setError(err.message || 'Failed to build project');
     } finally {
       setGenerating(false);
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(result);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+  const handleDownload = async () => {
+    if (!projectData) return;
+
+    try {
+      const blob = await downloadProjectZip(projectData);
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${projectData.project_name}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err: any) {
+      console.error('Download error:', err);
+      setError(err.message || 'Failed to download project');
+    }
   };
 
-  const handleDownload = () => {
-    const blob = new Blob([result], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${projectType.toLowerCase().replace(/\s+/g, '-')}-code.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+  const handleRegenerate = () => {
+    setShowEditor(false);
+    setProjectData(null);
   };
+
+  const handleBackToForm = () => {
+    setShowEditor(false);
+    setProjectData(null);
+  };
+
+  if (showEditor && projectData) {
+    return (
+      <CodeEditorLayout
+        projectData={projectData}
+        onDownload={handleDownload}
+        onRegenerate={handleBackToForm}
+      />
+    );
+  }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-lg">
-      <div className="flex items-center gap-3 mb-6">
-        <div className="p-3 bg-green-600 rounded-xl">
-          <Code className="w-6 h-6 text-white" />
-        </div>
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">AI Code Generator</h2>
-          <p className="text-gray-600">Generate complete project structures with setup instructions</p>
-        </div>
-      </div>
+    <>
+      <AnimatePresence>
+        {generating && <LoadingOverlay />}
+      </AnimatePresence>
 
-      {error && (
-        <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
-          {error}
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-lg">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-3 bg-accent rounded-xl">
+            <Code className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h2 className="text-2xl font-bold text-gray-900">AI Project Builder</h2>
+            <p className="text-gray-600">Generate complete project structures with code editor</p>
+          </div>
         </div>
-      )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left: Input */}
-        <div className="space-y-4">
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               What do you want to build?
@@ -97,104 +129,72 @@ export default function CodeGenerator() {
             <textarea
               value={prompt}
               onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Describe your project in detail..."
+              placeholder="Describe your project in detail... e.g., 'Create a FastAPI backend with JWT authentication, user management, and PostgreSQL database'"
               rows={6}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent resize-none"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent resize-none"
             />
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Language/Framework
-            </label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-            >
-              <option value="">Select language...</option>
-              {languages.map((lang) => (
-                <option key={lang} value={lang}>{lang}</option>
-              ))}
-            </select>
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Primary Language
+              </label>
+              <select
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+              >
+                <option value="">Select language...</option>
+                {languages.map((lang) => (
+                  <option key={lang} value={lang}>{lang.charAt(0).toUpperCase() + lang.slice(1)}</option>
+                ))}
+              </select>
+            </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project Type
-            </label>
-            <select
-              value={projectType}
-              onChange={(e) => setProjectType(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-600 focus:border-transparent"
-            >
-              <option value="">Select type...</option>
-              {projectTypes.map((type) => (
-                <option key={type} value={type}>{type}</option>
-              ))}
-            </select>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Project Type
+              </label>
+              <select
+                value={projectType}
+                onChange={(e) => setProjectType(e.target.value)}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-accent focus:border-transparent"
+              >
+                <option value="">Select type...</option>
+                {projectTypes.map((type) => (
+                  <option key={type} value={type}>{type.charAt(0).toUpperCase() + type.slice(1)}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <button
             onClick={handleGenerate}
             disabled={generating || !prompt.trim() || !language || !projectType}
-            className="w-full py-4 px-6 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            className="w-full py-4 px-6 bg-accent text-white font-semibold rounded-lg hover:bg-accent/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
             {generating ? (
               <>
                 <Loader2 className="w-5 h-5 animate-spin" />
-                Generating Code...
+                Building Project...
               </>
             ) : (
               <>
                 <Sparkles className="w-5 h-5" />
-                Generate Code
+                Build Project with AI
               </>
             )}
           </button>
-        </div>
 
-        {/* Right: Output */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <label className="block text-sm font-medium text-gray-700">
-              Generated Code
-            </label>
-            {result && (
-              <div className="flex gap-2">
-                <button
-                  onClick={handleCopy}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Copy to clipboard"
-                >
-                  {copied ? <Check className="w-4 h-4 text-green-600" /> : <Copy className="w-4 h-4" />}
-                </button>
-                <button
-                  onClick={handleDownload}
-                  className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                  title="Download file"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-            )}
-          </div>
-
-          <div className="bg-gray-900 rounded-lg p-6 overflow-auto h-[400px] font-mono text-sm">
-            {generating ? (
-              <div className="flex items-center justify-center h-full">
-                <Loader2 className="w-8 h-8 text-green-400 animate-spin" />
-              </div>
-            ) : result ? (
-              <pre className="text-green-400 whitespace-pre-wrap">{result}</pre>
-            ) : (
-              <div className="flex items-center justify-center h-full text-gray-500">
-                Your generated code will appear here
-              </div>
-            )}
+          <div className="bg-accent/5 border border-accent/20 rounded-lg p-4">
+            <p className="text-sm text-gray-700">
+              <strong>New:</strong> AI will generate a complete project with file structure, 
+              code editor, dependencies, and setup instructions. You can download everything as a ZIP file.
+            </p>
           </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

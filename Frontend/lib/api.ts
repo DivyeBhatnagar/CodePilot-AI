@@ -179,3 +179,104 @@ export async function generateCode(
 
   return await response.json();
 }
+
+// Project Builder Types
+export interface FileModel {
+  path: string;
+  content: string;
+  language?: string;
+}
+
+export interface ProjectBuildRequest {
+  prompt: string;
+  language: string;
+  project_type: string;
+}
+
+export interface ProjectResponse {
+  project_name: string;
+  description: string;
+  files: FileModel[];
+  dependencies: string[];
+  run_commands: string[];
+  setup_instructions: string[];
+}
+
+export interface RegenerateFileRequest {
+  file_path: string;
+  context: string;
+  instruction: string;
+}
+
+export interface RegenerateFileResponse {
+  file_path: string;
+  content: string;
+  language?: string;
+}
+
+// Project Builder API Functions
+export async function buildProject(
+  request: ProjectBuildRequest
+): Promise<ProjectResponse> {
+  const token = await getAuthToken();
+  
+  const response = await fetch(`${API_URL}/ai/build-project`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to build project');
+  }
+
+  return await response.json();
+}
+
+export async function regenerateFile(
+  request: RegenerateFileRequest
+): Promise<RegenerateFileResponse> {
+  const token = await getAuthToken();
+  
+  const response = await fetch(`${API_URL}/ai/regenerate-file`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to regenerate file');
+  }
+
+  return await response.json();
+}
+
+export async function downloadProjectZip(
+  projectData: ProjectResponse
+): Promise<Blob> {
+  const token = await getAuthToken();
+  
+  const response = await fetch(`${API_URL}/ai/download-zip`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify({ project_data: projectData }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to download project');
+  }
+
+  return await response.blob();
+}
