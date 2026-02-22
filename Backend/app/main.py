@@ -34,6 +34,8 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://localhost:3001",
+        "https://codepilotaii.vercel.app",
+        "http://codepilotaii.vercel.app",
         settings.FRONTEND_URL
     ],
     allow_credentials=True,
