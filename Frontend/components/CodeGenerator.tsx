@@ -14,7 +14,7 @@ export default function CodeGenerator() {
   const [language, setLanguage] = useState('');
   const [projectType, setProjectType] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [projectData, setProjectData] = useState<ProjectResponse | null>(null);
+  const [projectData, setProjectData] = useState<(ProjectResponse & { projectId?: string }) | null>(null);
   const [error, setError] = useState('');
   const [showEditor, setShowEditor] = useState(false);
   
