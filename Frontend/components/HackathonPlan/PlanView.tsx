@@ -69,12 +69,10 @@ Create a complete, production-ready project structure with all necessary files, 
         project_type: buildData.projectType
       });
 
-      setProjectData(response);
-      setShowEditor(true);
-      
-      // Save to Firebase
+      // Save to Firebase first to get projectId
+      let savedProjectId: string | undefined;
       try {
-        await saveGeneratedProject({
+        savedProjectId = await saveGeneratedProject({
           ...response,
           session_id: planData.session_id
         });
@@ -90,6 +88,10 @@ Create a complete, production-ready project structure with all necessary files, 
         console.error('Firebase save error:', firebaseError);
         // Continue even if Firebase save fails
       }
+      
+      // Set project data with ID and show editor
+      setProjectData({ ...response, projectId: savedProjectId });
+      setShowEditor(true);
     } catch (err: any) {
       console.error('Build error:', err);
       setError(err.message || 'Failed to build project');
@@ -136,6 +138,7 @@ Create a complete, production-ready project structure with all necessary files, 
     return (
       <CodeEditorLayout
         projectData={projectData}
+        projectId={projectData.projectId}
         onDownload={handleDownload}
         onRegenerate={handleBackToForm}
         onPitch={() => {}}

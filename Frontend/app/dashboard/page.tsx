@@ -12,9 +12,10 @@ import HackathonSetupModal from '@/components/HackathonSetupModal';
 import CodeGenerator from '@/components/CodeGenerator';
 import PlanView from '@/components/HackathonPlan/PlanView';
 import SavedProjectsPanel from '@/components/SavedProjectsPanel';
+import CodeEditorLayout from '@/components/ProjectBuilder/CodeEditorLayout';
 import Image from 'next/image';
 
-type ViewMode = 'home' | 'plan' | 'code' | 'saved';
+type ViewMode = 'home' | 'plan' | 'code' | 'saved' | 'project';
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
@@ -23,6 +24,7 @@ export default function DashboardPage() {
   const [showSetupModal, setShowSetupModal] = useState(false);
   const [generatingPlan, setGeneratingPlan] = useState(false);
   const [currentPlan, setCurrentPlan] = useState<any>(null);
+  const [currentProject, setCurrentProject] = useState<any>(null);
   const [error, setError] = useState('');
   const router = useRouter();
 
@@ -79,6 +81,11 @@ export default function DashboardPage() {
     } finally {
       setGeneratingPlan(false);
     }
+  };
+
+  const handleOpenProject = (project: any) => {
+    setCurrentProject(project);
+    setViewMode('project');
   };
 
   const handleExportPlan = () => {
@@ -284,9 +291,50 @@ export default function DashboardPage() {
                 setViewMode('plan');
               }}
               onSelectProject={(project) => {
-                // Handle opening saved project
-                alert('Opening saved project: ' + project.project_name);
+                handleOpenProject(project);
               }}
+              onOpenProject={handleOpenProject}
+            />
+          </motion.div>
+        )}
+
+        {viewMode === 'project' && currentProject && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+          >
+            <CodeEditorLayout
+              projectData={{
+                project_name: currentProject.project_name,
+                description: currentProject.description,
+                files: currentProject.files || [],
+                dependencies: currentProject.dependencies || [],
+                run_commands: currentProject.run_commands || [],
+                setup_instructions: currentProject.setup_instructions || []
+              }}
+              projectId={currentProject.id}
+              onDownload={async () => {
+                const { downloadProjectZip } = await import('@/lib/api');
+                try {
+                  const blob = await downloadProjectZip(currentProject);
+                  const url = URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = `${currentProject.project_name}.zip`;
+                  document.body.appendChild(a);
+                  a.click();
+                  document.body.removeChild(a);
+                  URL.revokeObjectURL(url);
+                } catch (err: any) {
+                  console.error('Download error:', err);
+                  setError(err.message || 'Failed to download project');
+                }
+              }}
+              onRegenerate={() => {
+                setCurrentProject(null);
+                setViewMode('home');
+              }}
+              onPitch={() => {}}
             />
           </motion.div>
         )}

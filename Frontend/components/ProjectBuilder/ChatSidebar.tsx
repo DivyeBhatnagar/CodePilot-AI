@@ -2,13 +2,14 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Send, Bot, User, Loader2 } from 'lucide-react';
+import { X, Send, Bot, User, Loader2, Code, Check, Undo } from 'lucide-react';
 import { chatWithAI } from '@/lib/api';
 
 interface Message {
   role: 'user' | 'assistant';
   content: string;
   timestamp: Date;
+  codeBlocks?: Array<{ code: string; language: string }>;
 }
 
 interface ChatSidebarProps {
@@ -16,12 +17,14 @@ interface ChatSidebarProps {
   onClose: () => void;
   projectContext: any;
   activeFile: string | null;
+  onApplyCode?: (code: string) => void;
 }
 
-export default function ChatSidebar({ isOpen, onClose, projectContext, activeFile }: ChatSidebarProps) {
+export default function ChatSidebar({ isOpen, onClose, projectContext, activeFile, onApplyCode }: ChatSidebarProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [appliedCodeIndex, setAppliedCodeIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -43,6 +46,21 @@ export default function ChatSidebar({ isOpen, onClose, projectContext, activeFil
     return () => document.removeEventListener('keydown', handleEscape);
   }, [isOpen, onClose]);
 
+  const extractCodeBlocks = (text: string): Array<{ code: string; language: string }> => {
+    const codeBlockRegex = /```(\w+)?\n([\s\S]*?)```/g;
+    const blocks: Array<{ code: string; language: string }> = [];
+    let match;
+
+    while ((match = codeBlockRegex.exec(text)) !== null) {
+      blocks.push({
+        language: match[1] || 'plaintext',
+        code: match[2].trim()
+      });
+    }
+
+    return blocks;
+  };
+
   const handleSend = async () => {
     if (!input.trim() || isLoading) return;
 
@@ -63,10 +81,13 @@ export default function ChatSidebar({ isOpen, onClose, projectContext, activeFil
         active_file: activeFile || undefined
       });
 
+      const codeBlocks = extractCodeBlocks(response.response);
+
       const assistantMessage: Message = {
         role: 'assistant',
         content: response.response,
-        timestamp: new Date()
+        timestamp: new Date(),
+        codeBlocks: codeBlocks.length > 0 ? codeBlocks : undefined
       };
 
       setMessages(prev => [...prev, assistantMessage]);
@@ -86,6 +107,14 @@ export default function ChatSidebar({ isOpen, onClose, projectContext, activeFil
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  const handleApplyCode = (code: string, messageIndex: number) => {
+    if (onApplyCode) {
+      onApplyCode(code);
+      setAppliedCodeIndex(messageIndex);
+      setTimeout(() => setAppliedCodeIndex(null), 2000);
     }
   };
 
@@ -153,17 +182,47 @@ export default function ChatSidebar({ isOpen, onClose, projectContext, activeFil
                       <Bot className="w-4 h-4 text-accent" />
                     </div>
                   )}
-                  <div
-                    className={`max-w-[80%] rounded-lg p-3 ${
-                      message.role === 'user'
-                        ? 'bg-accent text-white'
-                        : 'bg-gray-100 text-gray-900'
-                    }`}
-                  >
-                    <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                    <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white/70' : 'text-gray-500'}`}>
-                      {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </p>
+                  <div className="max-w-[80%]">
+                    <div
+                      className={`rounded-lg p-3 ${
+                        message.role === 'user'
+                          ? 'bg-accent text-white'
+                          : 'bg-gray-100 text-gray-900'
+                      }`}
+                    >
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white/70' : 'text-gray-500'}`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    
+                    {/* Code Blocks with Apply Button */}
+                    {message.codeBlocks && message.codeBlocks.map((block, blockIndex) => (
+                      <div key={blockIndex} className="mt-2 bg-gray-900 rounded-lg overflow-hidden">
+                        <div className="flex items-center justify-between px-3 py-2 bg-gray-800 border-b border-gray-700">
+                          <span className="text-xs text-gray-400 font-mono">{block.language}</span>
+                          <button
+                            onClick={() => handleApplyCode(block.code, index)}
+                            className="flex items-center gap-1 px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs rounded transition-colors"
+                          >
+                            {appliedCodeIndex === index ? (
+                              <>
+                                <Check className="w-3 h-3" />
+                                Applied
+                              </>
+                            ) : (
+                              <>
+                                <Code className="w-3 h-3" />
+                                Apply Code
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <pre className="p-3 text-xs text-gray-100 overflow-x-auto">
+                          <code>{block.code}</code>
+                        </pre>
+                      </div>
+                    ))}
                   </div>
                   {message.role === 'user' && (
                     <div className="flex-shrink-0 w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center">

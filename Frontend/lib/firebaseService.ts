@@ -90,6 +90,43 @@ export async function saveGeneratedProject(projectData: {
   return projectId;
 }
 
+// Update existing project (for auto-save)
+export async function updateGeneratedProject(projectId: string, projectData: {
+  project_name: string;
+  description: string;
+  files: any[];
+  dependencies: string[];
+  run_commands: string[];
+  setup_instructions: string[];
+}) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const projectRef = doc(db, 'users', user.uid, 'generated_projects', projectId);
+
+  await updateDoc(projectRef, {
+    ...projectData,
+    updated_at: serverTimestamp()
+  });
+
+  return projectId;
+}
+
+// Get specific project by ID
+export async function getGeneratedProject(projectId: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('User not authenticated');
+
+  const projectRef = doc(db, 'users', user.uid, 'generated_projects', projectId);
+  const projectDoc = await getDoc(projectRef);
+
+  if (!projectDoc.exists()) {
+    throw new Error('Project not found');
+  }
+
+  return { id: projectDoc.id, ...projectDoc.data() };
+}
+
 // Get all generated projects for current user
 export async function getUserGeneratedProjects() {
   const user = auth.currentUser;

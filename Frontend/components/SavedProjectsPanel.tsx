@@ -8,9 +8,10 @@ import { getUserHackathonPlans, getUserGeneratedProjects, deleteHackathonPlan, d
 interface SavedProjectsPanelProps {
   onSelectPlan: (plan: any) => void;
   onSelectProject: (project: any) => void;
+  onOpenProject?: (project: any) => void;
 }
 
-export default function SavedProjectsPanel({ onSelectPlan, onSelectProject }: SavedProjectsPanelProps) {
+export default function SavedProjectsPanel({ onSelectPlan, onSelectProject, onOpenProject }: SavedProjectsPanelProps) {
   const [plans, setPlans] = useState<any[]>([]);
   const [projects, setProjects] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -163,10 +164,10 @@ export default function SavedProjectsPanel({ onSelectPlan, onSelectProject }: Sa
                   </button>
                 </div>
                 <button
-                  onClick={() => onSelectProject(project)}
+                  onClick={() => onOpenProject ? onOpenProject(project) : onSelectProject(project)}
                   className="w-full px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
                 >
-                  Open Project
+                  Resume Project
                 </button>
               </motion.div>
             ))}
