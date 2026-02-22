@@ -13,7 +13,7 @@ class Settings(BaseSettings):
     FIREBASE_CREDENTIALS_PATH: str = ""
     
     # Frontend
-    FRONTEND_URL: str = "https://your-app.vercel.app"
+    FRONTEND_URL: str = "https://codepilotaii.vercel.app"
     
     # Server
     PORT: int = 8000
