@@ -3,6 +3,7 @@
 import { motion, useMotionValue, useTransform } from "framer-motion";
 import { Sparkles, Zap, Rocket, Terminal } from "lucide-react";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 
 const terminalLines = [
   { type: "command", text: "$ codepilot analyze 'Build a real-time chat app'" },
@@ -97,9 +98,11 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.2 }}
           className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-8"
         >
-          <button className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-full hover:shadow-lg hover:shadow-blue-500/50 transition-all hover:scale-105">
-            Launch App
-          </button>
+          <Link href="/register" className="w-full sm:w-auto">
+            <button className="w-full px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-full hover:shadow-lg hover:shadow-blue-500/50 transition-all hover:scale-105">
+              Launch App
+            </button>
+          </Link>
           <button className="w-full sm:w-auto px-8 py-4 border border-gray-300 text-primary font-medium rounded-full hover:border-gray-400 hover:bg-gray-50 transition-all">
             Learn More
           </button>
