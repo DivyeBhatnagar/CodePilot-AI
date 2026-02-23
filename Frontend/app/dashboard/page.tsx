@@ -6,7 +6,7 @@ import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import { createHackathonSession, HackathonSessionCreate } from '@/lib/api';
 import { saveHackathonPlan, logUserActivity } from '@/lib/firebaseService';
-import { LogOut, Loader2, Rocket, Code, ArrowLeft, FileText, Download } from 'lucide-react';
+import { LogOut, Loader2, Rocket, Code, ArrowLeft, FileText, Sparkles, Activity, Clock, FolderOpen, Zap } from 'lucide-react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import HackathonSetupModal from '@/components/HackathonSetupModal';
@@ -35,7 +35,6 @@ export default function DashboardPage() {
         setUser(currentUser);
         setLoading(false);
       } else if (!loading) {
-        // Only redirect if we've finished initial load and there's no user
         router.push('/login');
       } else {
         setLoading(false);
@@ -63,7 +62,6 @@ export default function DashboardPage() {
       const response = await createHackathonSession(sessionData);
       setCurrentPlan(response.data);
       
-      // Save to Firebase
       try {
         await saveHackathonPlan(response.data);
         await logUserActivity({
@@ -75,7 +73,6 @@ export default function DashboardPage() {
         });
       } catch (firebaseError) {
         console.error('Firebase save error:', firebaseError);
-        // Continue even if Firebase save fails
       }
       
       setShowSetupModal(false);
@@ -93,25 +90,10 @@ export default function DashboardPage() {
     setViewMode('project');
   };
 
-  const handleExportPlan = () => {
-    if (!currentPlan) return;
-    
-    const content = `# ${currentPlan.hackathon_name}\n\nGenerated: ${new Date(currentPlan.created_at).toLocaleString()}\n\n${currentPlan.full_plan}`;
-    const blob = new Blob([content], { type: 'text/markdown' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${currentPlan.hackathon_name.toLowerCase().replace(/\s+/g, '-')}-plan.md`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-white to-gray-50">
-        <Loader2 className="w-8 h-8 text-accent animate-spin" />
+        <Loader2 className="w-8 h-8 text-blue-600 animate-spin" />
       </div>
     );
   }
@@ -129,7 +111,7 @@ export default function DashboardPage() {
               {viewMode !== 'home' && (
                 <button
                   onClick={() => setViewMode('home')}
-                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                  className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 >
                   <ArrowLeft className="w-4 h-4" />
                   Home
@@ -140,7 +122,7 @@ export default function DashboardPage() {
               <span className="text-sm text-gray-600">{user?.email}</span>
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 transition-colors"
+                className="flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-all duration-200"
               >
                 <LogOut className="w-4 h-4" />
                 Logout
@@ -152,9 +134,13 @@ export default function DashboardPage() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         {error && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg text-red-800">
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-6 p-4 bg-red-50 border border-red-200 rounded-xl text-red-800"
+          >
             {error}
-          </div>
+          </motion.div>
         )}
 
         {viewMode === 'home' && (
@@ -163,109 +149,210 @@ export default function DashboardPage() {
             animate={{ opacity: 1, y: 0 }}
             className="space-y-12"
           >
-            {/* Hero Section */}
-            <div className="text-center">
+            {/* Hero Section - Refined */}
+            <div className="text-center max-w-3xl mx-auto">
               <motion.div
-                initial={{ scale: 0.9 }}
-                animate={{ scale: 1 }}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-accent/10 text-accent rounded-full text-sm font-medium mb-6"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.3 }}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-100 text-blue-700 rounded-full text-sm font-medium mb-6"
               >
                 <Rocket className="w-4 h-4" />
-                Your AI Hackathon Teammate
+                🚀 Your AI Hackathon Teammate
               </motion.div>
-              <h2 className="text-5xl font-bold text-gray-900 mb-4">
-                Welcome back, {user?.displayName || 'Developer'}!
-              </h2>
-              <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-                Transform your hackathon ideas into structured execution plans with AI-powered guidance
-              </p>
-            </div>
-
-            {/* Primary Action */}
-            <div className="max-w-2xl mx-auto">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                onClick={() => setShowSetupModal(true)}
-                className="w-full group relative overflow-hidden bg-gradient-to-r from-accent to-purple-600 text-white rounded-2xl p-12 shadow-2xl hover:shadow-accent/20 transition-all"
+              
+              <motion.h1
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
+                className="text-4xl md:text-5xl font-bold text-gray-900 mb-4"
               >
-                <div className="relative z-10">
-                  <div className="inline-flex p-4 bg-white/20 rounded-2xl mb-4">
-                    <Rocket className="w-10 h-10" />
-                  </div>
-                  <h3 className="text-3xl font-bold mb-2">Start New Hackathon Plan</h3>
-                  <p className="text-white/90 text-lg">
-                    Create a comprehensive execution plan with timeline, team roles, and tech stack
-                  </p>
-                </div>
-                <div className="absolute inset-0 bg-gradient-to-r from-purple-600 to-accent opacity-0 group-hover:opacity-100 transition-opacity" />
-              </motion.button>
-            </div>
-
-            {/* Secondary Actions */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl mx-auto">
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setViewMode('code')}
-                className="group p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-green-600 hover:shadow-xl transition-all text-left"
+                Welcome back, {user?.displayName || user?.email?.split('@')[0] || 'Developer'}
+              </motion.h1>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+                className="text-lg text-gray-600 mb-8"
               >
-                <div className="inline-flex p-3 bg-green-600 rounded-xl mb-4">
-                  <Code className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">AI Code Generator</h3>
-                <p className="text-gray-600">
-                  Generate complete project structures with setup instructions and deployment guides
-                </p>
-                <div className="mt-4 flex items-center text-green-600 group-hover:translate-x-1 transition-transform">
-                  <span className="text-sm font-medium">Open Generator</span>
-                  <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </motion.button>
+                Transform your hackathon ideas into structured execution plans with AI-powered guidance.
+              </motion.p>
 
-              <motion.button
-                whileHover={{ scale: 1.02 }}
-                onClick={() => setViewMode('saved')}
-                className="group p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-blue-600 hover:shadow-xl transition-all text-left"
+              {/* Primary Actions */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="flex flex-col sm:flex-row items-center justify-center gap-4"
               >
-                <div className="inline-flex p-3 bg-blue-600 rounded-xl mb-4">
-                  <FileText className="w-6 h-6 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold text-gray-900 mb-2">Saved Projects</h3>
-                <p className="text-gray-600">
-                  View and manage your saved hackathon plans and generated projects
-                </p>
-                <div className="mt-4 flex items-center text-blue-600 group-hover:translate-x-1 transition-transform">
-                  <span className="text-sm font-medium">View Saved</span>
-                  <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </div>
-              </motion.button>
-
-              {currentPlan && (
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  onClick={() => setViewMode('plan')}
-                  className="group p-8 bg-white border-2 border-gray-200 rounded-2xl hover:border-accent hover:shadow-xl transition-all text-left"
+                <button
+                  onClick={() => setShowSetupModal(true)}
+                  className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-medium rounded-full hover:shadow-lg hover:shadow-blue-500/50 transition-all duration-200 hover:scale-105 flex items-center justify-center gap-2"
                 >
-                  <div className="inline-flex p-3 bg-accent rounded-xl mb-4">
-                    <FileText className="w-6 h-6 text-white" />
+                  <Sparkles className="w-5 h-5" />
+                  Start New Hackathon Plan
+                </button>
+                <button
+                  onClick={() => setViewMode('saved')}
+                  className="w-full sm:w-auto px-8 py-4 border-2 border-gray-300 text-gray-700 font-medium rounded-full hover:border-gray-400 hover:bg-gray-50 transition-all duration-200 flex items-center justify-center gap-2"
+                >
+                  <FolderOpen className="w-5 h-5" />
+                  View Saved Projects
+                </button>
+              </motion.div>
+            </div>
+
+            {/* Stats Strip */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4"
+            >
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-blue-50 rounded-lg">
+                    <FileText className="w-5 h-5 text-blue-600" />
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">View Current Plan</h3>
-                  <p className="text-gray-600">
-                    {currentPlan.hackathon_name}
-                  </p>
-                  <div className="mt-4 flex items-center text-accent group-hover:translate-x-1 transition-transform">
-                    <span className="text-sm font-medium">Open Plan</span>
-                    <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">12</div>
+                <div className="text-sm text-gray-600">Total Projects</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-green-50 rounded-lg">
+                    <Activity className="w-5 h-5 text-green-600" />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">3</div>
+                <div className="text-sm text-gray-600">Active Plans</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-purple-50 rounded-lg">
+                    <Zap className="w-5 h-5 text-purple-600" />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">47</div>
+                <div className="text-sm text-gray-600">AI Generations</div>
+              </div>
+
+              <div className="bg-white rounded-2xl p-6 border border-gray-200 hover:shadow-lg hover:scale-105 transition-all duration-200">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 bg-orange-50 rounded-lg">
+                    <Clock className="w-5 h-5 text-orange-600" />
+                  </div>
+                </div>
+                <div className="text-3xl font-bold text-gray-900 mb-1">2h</div>
+                <div className="text-sm text-gray-600">Last Activity</div>
+              </div>
+            </motion.div>
+
+            {/* Main Action Cards */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.5 }}
+              className="grid grid-cols-1 md:grid-cols-2 gap-6"
+            >
+              {/* AI Code Generator Card */}
+              <div
+                onClick={() => setViewMode('code')}
+                className="group cursor-pointer bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-green-500 hover:shadow-xl transition-all duration-200"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl shadow-lg">
+                    <Code className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-green-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                     </svg>
                   </div>
-                </motion.button>
-              )}
-            </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">AI Code Generator</h3>
+                <div className="h-px bg-gray-200 my-4"></div>
+                <p className="text-gray-600 mb-4">
+                  Generate complete project structures with setup instructions and deployment guides
+                </p>
+                <div className="flex items-center text-green-600 font-medium group-hover:translate-x-1 transition-transform">
+                  <span className="text-sm">Open Generator</span>
+                  <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+
+              {/* Saved Projects Card */}
+              <div
+                onClick={() => setViewMode('saved')}
+                className="group cursor-pointer bg-white rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-500 hover:shadow-xl transition-all duration-200"
+              >
+                <div className="flex items-start justify-between mb-4">
+                  <div className="p-3 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl shadow-lg">
+                    <FileText className="w-6 h-6 text-white" />
+                  </div>
+                  <div className="text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                  </div>
+                </div>
+                <h3 className="text-2xl font-bold text-gray-900 mb-2">Saved Projects</h3>
+                <div className="h-px bg-gray-200 my-4"></div>
+                <p className="text-gray-600 mb-4">
+                  View and manage your saved hackathon plans and generated projects
+                </p>
+                <div className="flex items-center text-blue-600 font-medium group-hover:translate-x-1 transition-transform">
+                  <span className="text-sm">View Saved</span>
+                  <svg className="w-4 h-4 ml-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </div>
+              </div>
+            </motion.div>
+
+            {/* Recent Activity Section */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.6 }}
+              className="bg-white rounded-2xl p-8 border border-gray-200 shadow-sm"
+            >
+              <h3 className="text-xl font-bold text-gray-900 mb-6">Recent Activity</h3>
+              <div className="space-y-4">
+                <div className="flex items-start gap-4">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-blue-600 rounded-full mt-2"></div>
+                    <div className="absolute top-4 left-1 w-px h-12 bg-gray-200"></div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 font-medium">Generated Maths Chatbot Project</p>
+                    <p className="text-sm text-gray-500">2 hours ago</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="relative">
+                    <div className="w-2 h-2 bg-green-600 rounded-full mt-2"></div>
+                    <div className="absolute top-4 left-1 w-px h-12 bg-gray-200"></div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 font-medium">Edited Hackathon Plan</p>
+                    <p className="text-sm text-gray-500">Yesterday</p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-2 h-2 bg-purple-600 rounded-full mt-2"></div>
+                  <div className="flex-1">
+                    <p className="text-gray-900 font-medium">Created new workspace</p>
+                    <p className="text-sm text-gray-500">3 days ago</p>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
         )}
 
@@ -353,4 +440,3 @@ export default function DashboardPage() {
     </div>
   );
 }
-
